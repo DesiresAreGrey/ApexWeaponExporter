@@ -98,18 +98,14 @@ if (string.IsNullOrEmpty(steamManifestId)) {
     return;
 }
 
-
 Directory.CreateDirectory("Tools\\downloads");
 
 // create filelist for depot downloader (only patch master and common rpak(s) are needed)
-if (File.Exists("Tools\\downloads\\filelist.txt"))
-    File.Delete("Tools\\downloads\\filelist.txt");
-File.WriteAllText("Tools\\downloads\\filelist.txt", """
-    paks/Win64/patch_master.rpak
-    paks/Win64/common.rpak
-    regex:^paks/Win64/common(?:\(\d+\))?\.rpak$
-    """
-);
+"""
+paks/Win64/patch_master.rpak
+paks/Win64/common.rpak
+regex:^paks/Win64/common(?:\(\d+\))?\.rpak$
+""".SaveToFile("Tools\\downloads\\filelist.txt");
 
 // delete existing download
 if (redownload && Directory.Exists($"Tools\\downloads\\{steamManifestId}")) {
@@ -141,9 +137,7 @@ if (command == "list" || command == "savelist") { // list weapon defs
         Utils.PressAnyKeyToExit(1, "Failed to clear exported_files directory.");
 
     if (command == "savelist") {
-        if (File.Exists($"weapon_definitions_{steamManifestId}.txt"))
-            File.Delete($"weapon_definitions_{steamManifestId}.txt");
-        File.WriteAllLines($"weapon_definitions_{steamManifestId}.txt", weaponDefs);
+        weaponDefs.SaveToFile($"Output\\weapon_definitions_{seasonManifest.RootElement.GetProperty("ID").GetString()}_{steamManifestId}.txt");
     }
     else {
         Console.WriteLine("Weapon Definitions:");
@@ -168,6 +162,10 @@ else if (command == "export") { // export weapon defs
         return;
     }
 
+    // season id shouldnt have slashes cause itd mess up the folder structure
+    if (season.ID.Contains('\\') || season.ID.Contains('/'))
+        Utils.PressAnyKeyToExit(1, $"Invalid season ID: {season.ID}");
+    
     string seasonOutputDir = "Output\\" + season.ID;
 
     if (!Utils.TryClearDirectory(seasonOutputDir))
@@ -231,7 +229,7 @@ else if (command == "export") { // export weapon defs
         // its in vdf (Valve Data Format) from what i can tell but idk if the file extension should be .vdf or .txt
         string path = $"{seasonOutputDir}\\weapons\\{weapon.Key}.vdf";
         Console.WriteLine($"Saving {path} ({weapon.Value.Asset})");
-        File.WriteAllLines(path, lines);
+        lines.SaveToFile(path);
     }
 
     // export blast/spread patterns and viewkick (recoil) patterns
@@ -240,14 +238,14 @@ else if (command == "export") { // export weapon defs
         string[] lines = [.. File.ReadAllLines($"Tools\\exported_files\\weapon\\{patternDef}.txt").Where(line => !line.TrimStart().StartsWith("//"))];
         
         Console.WriteLine($"Saving {seasonOutputDir}\\patterns\\{patternDef}.vdf");
-        File.WriteAllLines($"{seasonOutputDir}\\patterns\\{patternDef}.vdf", lines);
+        lines.SaveToFile($"{seasonOutputDir}\\patterns\\{patternDef}.vdf");
     }
 
     // remove asset paths from manifest since theyre only needed for the export process or whatever
     foreach (WeaponInfo weapon in season.Weapons.Values) weapon.Asset = null;
 
     // save season manifest with all needed info (no asset names, setting CoreWeapon to true if not included in the human readable/input manifest)
-    File.WriteAllText($"{seasonOutputDir}\\manifest.json", JsonSerializer.Serialize(season, SeasonJsonContext.Default.SeasonInfo));
+    JsonSerializer.Serialize(season, SeasonJsonContext.Default.SeasonInfo).SaveToFile($"{seasonOutputDir}\\manifest.json");
 }
 
 Utils.PressAnyKeyToExit();
@@ -338,7 +336,7 @@ namespace ApexWeaponExporter {
                     if (!string.IsNullOrEmpty(line)) {
                         Match usernameRegex = Regex.Match(line, @"-username\s+(?<username>\S+)\s+-remember-password");
                         if (usernameRegex.Success)
-                            File.WriteAllText("Tools\\username.txt", usernameRegex.Groups["username"].Value.Trim());
+                            usernameRegex.Groups["username"].Value.Trim().SaveToFile("Tools\\username.txt");
                     }
                     line = string.Empty;
                 }
@@ -368,7 +366,7 @@ namespace ApexWeaponExporter {
                 return JsonSerializer.Deserialize(File.ReadAllText("Tools\\versions.json"), VersionsJsonContext.Default.DownloadedVersions) ?? new();
             }
 
-            public void Save() => File.WriteAllText("Tools\\versions.json", JsonSerializer.Serialize(this, VersionsJsonContext.Default.DownloadedVersions));
+            public void Save() => JsonSerializer.Serialize(this, VersionsJsonContext.Default.DownloadedVersions).SaveToFile("Tools\\versions.json");
         }
         
     }
@@ -439,6 +437,8 @@ namespace ApexWeaponExporter {
         public static async Task<byte[]> DownloadWithProgress(string url) {
             using HttpResponseMessage response = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
 
+            response.EnsureSuccessStatusCode();
+
             long? total = response.Content.Headers.ContentLength;
             await using Stream input = await response.Content.ReadAsStreamAsync();
             using MemoryStream output = new();
@@ -464,6 +464,20 @@ namespace ApexWeaponExporter {
         extension(string val) {
             public string? EmptyNullable => string.IsNullOrEmpty(val) ? null : val;
             public string? BlankNullable => string.IsNullOrWhiteSpace(val) ? null : val;
+
+            public void SaveToFile(string path) {
+                if (!Directory.Exists(Path.GetDirectoryName(path)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, val);
+            }
+        }
+
+        extension(IEnumerable<string> val) {
+            public void SaveToFile(string path) {
+                if (!Directory.Exists(Path.GetDirectoryName(path)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllLines(path, val);
+            }
         }
     }
 
