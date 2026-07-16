@@ -45,3 +45,6 @@ the weapon).
 `Modes` is an array of the weapon's firing modes. The name is the display name, `Mods` are the overrides in the Mods section of the weapon definition
 that are applied for said firing mode. Sometimes firing modes use multiple mods which is why its an array. `Type` is the type of firing mode it is,
 though its not currently used for anything on the site. The only exception is the "Base" type which is used to apply mods to the default firing mode of the weapon.
+
+Example of the Mods section in the Alternator weapon definition.
+<img width="750" height="423" alt="2026-07-16_19-05-58_Code" src="https://github.com/user-attachments/assets/06f74995-112c-481b-8931-516f4f8654b8" />
