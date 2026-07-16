@@ -10,9 +10,10 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) => {
     Utils.PressAnyKeyToExit(1);
 };
 
+// Update/download rsx/DepotDownloader
 string? rsxVersion = await Utils.GetLatestVersion("r-ex/rsx");
 if (rsxVersion is not null && (!File.Exists("Tools\\rsx_nogui.exe") || Tools.Versions.RSXVersion != rsxVersion)) {
-    Console.WriteLine($"Downloading RSX {rsxVersion}...");
+    Console.WriteLine($"Downloading rsx {rsxVersion}...");
     Utils.SaveFileFromZip(await Utils.DownloadGithubRelease("r-ex/rsx", v => Path.GetExtension(v.name) == ".zip"),
         f => Path.GetFileName(f.FullName).EndsWith("rsx_nogui.exe"), "Tools\\rsx_nogui.exe");
     Tools.Versions.RSXVersion = rsxVersion;
@@ -25,98 +26,108 @@ if (depotDownloaderVersion is not null && (!File.Exists("Tools\\DepotDownloader.
     Tools.Versions.DepotDownloaderVersion = depotDownloaderVersion;
 }
 
-Console.Write("Season json path (can omit .json extension) [Blank for season.json]: ");
-string seasonInfoPath = Console.ReadLine()?.BlankNullable ?? "season.json";
+// Get season manifest
+Console.Write("Season manifest path (can omit .json extension) [Blank for Manifests\\current.json]: ");
+string seasonManifestPath = Console.ReadLine()?.BlankNullable ?? "Manifests\\current.json";
 
-if (!seasonInfoPath.EndsWith(".json"))
-    seasonInfoPath += ".json";
-if (!File.Exists(seasonInfoPath) && File.Exists(Path.Combine("Old", seasonInfoPath)))
-    seasonInfoPath = Path.Combine("Old", seasonInfoPath);
-if (!File.Exists(seasonInfoPath)) {
-    Console.WriteLine($"Season json not found: {seasonInfoPath}");
+// Add .json if missing
+if (!seasonManifestPath.EndsWith(".json"))
+    seasonManifestPath += ".json";
+
+// shorthand for manifests folder
+if (!File.Exists(seasonManifestPath) && File.Exists(Path.Combine("Manifests", seasonManifestPath)))
+    seasonManifestPath = Path.Combine("Manifests", seasonManifestPath);
+    
+if (!File.Exists(seasonManifestPath)) {
+    Console.WriteLine($"Season manifest not found: {seasonManifestPath}");
     Utils.PressAnyKeyToExit(1);
     return;
 }
 
 Console.Write("Export or list weapon definitions (export/list/savelist), add +redl to redownload [Blank for export]: ");
-string? input = Console.ReadLine()?.Trim().BlankNullable;
-bool redownload = input?.EndsWith("+redl") == true;
+string? command = Console.ReadLine()?.Trim().BlankNullable;
+bool redownload = command?.EndsWith("+redl") == true;
 if (redownload)
-    input = input?.Replace("+redl", "");
-input = input?.Trim().BlankNullable ?? "export";
+    command = command?.Replace("+redl", "");
+command = command?.Trim().BlankNullable ?? "export";
 
-JsonDocument seasonJson = JsonDocument.Parse(File.ReadAllText(seasonInfoPath));
+JsonDocument seasonManifest = JsonDocument.Parse(File.ReadAllText(seasonManifestPath));
 
-string? manifestId;
-if (seasonJson.RootElement.TryGetProperty("SteamManifestID", out JsonElement manifestIdElement) && manifestIdElement.TryGetInt64(out long manifestIdLong)) {
-    manifestId = manifestIdLong.ToString();
-    Console.WriteLine($"Using Manifest ID (https://steamdb.info/depot/1172471/manifests/): {manifestId}");
+string? steamManifestId;
+
+// check manifest for steam manifest id
+if (seasonManifest.RootElement.TryGetProperty("SteamManifestID", out JsonElement steamManifestIdElement) && steamManifestIdElement.TryGetInt64(out long manifestIdLong)) {
+    steamManifestId = manifestIdLong.ToString();
+    Console.WriteLine($"Using Manifest ID (https://steamdb.info/depot/1172471/manifests/): {steamManifestId}");
 }
 else {
+    // prompt for steam manifest id
     Console.Write("Manifest ID (https://steamdb.info/depot/1172471/manifests/) [Blank for latest]: ");
-    string? manifestIdInput = Console.ReadLine()?.Trim();
-    if (string.IsNullOrEmpty(manifestIdInput)) {
+    string? steamManifestIdInput = Console.ReadLine()?.Trim();
+
+    // use api to get latest steam manifest id
+    if (string.IsNullOrEmpty(steamManifestIdInput)) {
         HttpResponseMessage response = await Utils.HttpClient.GetAsync("https://api.steamcmd.net/v1/info/1172470");
         response.EnsureSuccessStatusCode();
 
         Stream stream = await response.Content.ReadAsStreamAsync();
         JsonDocument json = await JsonDocument.ParseAsync(stream);
         try {
-            manifestId = json.RootElement
+            steamManifestId = json.RootElement
                 .GetProperty("data").GetProperty("1172470").GetProperty("depots").GetProperty("1172471")
                 .GetProperty("manifests").GetProperty("public").GetProperty("gid").GetString();
 
-            Console.WriteLine($"Using latest manifest ID: {manifestId}");
+            Console.WriteLine($"Using latest manifest ID: {steamManifestId}");
         }
         catch (Exception ex) {
-            Console.WriteLine($"Failed to get latest manifest ID: {ex.Message}");
-            Utils.PressAnyKeyToExit(1);
+            Utils.PressAnyKeyToExit(1, $"Failed to get latest manifest ID: {ex.Message}");
             return;
         }
     }
-    else if (ulong.TryParse(manifestIdInput, out _)) {
-        manifestId = manifestIdInput;
-        Console.WriteLine($"Using manifest ID: {manifestId}");
+    else if (ulong.TryParse(steamManifestIdInput, out _)) { // check if id is a number (i think its supposed to be a number)
+        steamManifestId = steamManifestIdInput;
+        Console.WriteLine($"Using manifest ID: {steamManifestId}");
     }
     else {
-        Console.WriteLine("Invalid manifest ID");
-        Utils.PressAnyKeyToExit(1);
+        Utils.PressAnyKeyToExit(1, "Invalid manifest ID");
         return;
     }
 }
-if (string.IsNullOrEmpty(manifestId)) {
-    Console.WriteLine("Invalid manifest ID");
-    Utils.PressAnyKeyToExit(1);
+if (string.IsNullOrEmpty(steamManifestId)) {
+    Utils.PressAnyKeyToExit(1, "Invalid manifest ID");
     return;
 }
 
-Directory.CreateDirectory("Tools\\depot");
-if (File.Exists("Tools\\depot\\filelist.txt"))
-    File.Delete("Tools\\depot\\filelist.txt");
-File.WriteAllText("Tools\\depot\\filelist.txt", """
+
+Directory.CreateDirectory("Tools\\downloads");
+
+// create filelist for depot downloader (only patch master and common rpak(s) are needed)
+if (File.Exists("Tools\\downloads\\filelist.txt"))
+    File.Delete("Tools\\downloads\\filelist.txt");
+File.WriteAllText("Tools\\downloads\\filelist.txt", """
     paks/Win64/patch_master.rpak
     paks/Win64/common.rpak
     regex:^paks/Win64/common(?:\(\d+\))?\.rpak$
     """
 );
 
-if (redownload && Directory.Exists($"Tools\\depot\\{manifestId}")) {
-    Console.WriteLine($"Redownloading manifest {manifestId}...");
-    if (!Utils.TryClearDirectory($"Tools\\depot\\{manifestId}", true))
+// delete existing download
+if (redownload && Directory.Exists($"Tools\\downloads\\{steamManifestId}")) {
+    Console.WriteLine($"Redownloading paks from manifest {steamManifestId}...");
+    if (!Utils.TryClearDirectory($"Tools\\downloads\\{steamManifestId}", true))
         Utils.PressAnyKeyToExit(1);
 }
 
-if (!Directory.Exists($"Tools\\depot\\{manifestId}")) {
-    Tools.RunDepotDownloader(manifestId);
-}
+// download paks if not already downloaded
+if (!Directory.Exists($"Tools\\downloads\\{steamManifestId}"))
+    Tools.RunDepotDownloader(steamManifestId);
 
-string commonRpakPath = $"{Environment.CurrentDirectory}\\Tools\\depot\\{manifestId}\\paks\\Win64\\common.rpak";
-if (!File.Exists(commonRpakPath)) {
-    Console.WriteLine($"common.rpak not found: {commonRpakPath}");
-    Utils.PressAnyKeyToExit(1);
-}
+string commonRpakPath = $"{Environment.CurrentDirectory}\\Tools\\downloads\\{steamManifestId}\\paks\\Win64\\common.rpak";
 
-if (input == "list" || input == "savelist") {
+if (!File.Exists(commonRpakPath))
+    Utils.PressAnyKeyToExit(1, $"common.rpak not found: {commonRpakPath}");
+
+if (command == "list" || command == "savelist") { // list weapon defs
     if (Directory.Exists("Tools\\exported_files")) {
         Console.WriteLine("Clearing exported_files...");
         if (!Utils.TryClearDirectory("Tools\\exported_files"))
@@ -129,21 +140,17 @@ if (input == "list" || input == "savelist") {
     if (!Utils.TryClearDirectory("Tools\\exported_files"))
         Utils.PressAnyKeyToExit(1, "Failed to clear exported_files directory.");
 
-    if (input == "savelist") {
-        if (File.Exists("weapon_definitions.txt"))
-            File.Delete("weapon_definitions.txt");
-        File.WriteAllLines("weapon_definitions.txt", weaponDefs);
+    if (command == "savelist") {
+        if (File.Exists($"weapon_definitions_{steamManifestId}.txt"))
+            File.Delete($"weapon_definitions_{steamManifestId}.txt");
+        File.WriteAllLines($"weapon_definitions_{steamManifestId}.txt", weaponDefs);
     }
     else {
         Console.WriteLine("Weapon Definitions:");
         weaponDefs.ToList().ForEach(Console.WriteLine);
-        Console.WriteLine("Press enter to exit...");
-        Console.ReadLine();
-        return;
     }
-    return;
 }
-else if (input == "export") {
+else if (command == "export") { // export weapon defs
     if (Directory.Exists("Tools\\exported_files")) {
         Console.WriteLine("Clearing exported_files...");
         if (!Utils.TryClearDirectory("Tools\\exported_files"))
@@ -153,9 +160,10 @@ else if (input == "export") {
 
     Tools.RunRSX(commonRpakPath);
 
-    SeasonInfo? season = JsonSerializer.Deserialize(File.ReadAllText(seasonInfoPath), SeasonJsonContext.Default.SeasonInfo);
+    // load season manifest
+    SeasonInfo? season = JsonSerializer.Deserialize(File.ReadAllText(seasonManifestPath), SeasonJsonContext.Default.SeasonInfo);
     if (season is null) {
-        Console.WriteLine("Failed to load season json");
+        Console.WriteLine("Failed to load season manifest");
         Utils.PressAnyKeyToExit(1);
         return;
     }
@@ -163,33 +171,46 @@ else if (input == "export") {
     string seasonOutputDir = "Output\\" + season.ID;
 
     if (!Utils.TryClearDirectory(seasonOutputDir))
-        Utils.PressAnyKeyToExit(1);
+        Utils.PressAnyKeyToExit(1, $"Failed to clear {seasonOutputDir}");
     Directory.CreateDirectory($"{seasonOutputDir}\\patterns");
     Directory.CreateDirectory($"{seasonOutputDir}\\weapons");
 
+    List<string> missingAssets = [];
     List<string> missingWeaponDefs = [];
     List<string> invalidWeaponMods = [];
     foreach (KeyValuePair<string, WeaponInfo> weapon in season.Weapons) {
+        // check that all weapon defs in manifest exist
         if (string.IsNullOrEmpty(weapon.Value.Asset))
-            Utils.PressAnyKeyToExit(1, $"Weapon {weapon.Key} has no asset defined.");
+            missingAssets.Add(weapon.Key);
         
         string weaponDefPath = $"Tools\\exported_files\\weapon\\{weapon.Value.Asset}.txt";
         if (File.Exists(weaponDefPath)) {
+            // check that there are no invalid mods
             List<string> lines = [.. File.ReadAllLines(weaponDefPath).Where(line => !line.TrimStart().StartsWith("//"))];
 
+            // list of all mods used by the weapon modes
             string[] usedMods = weapon.Value.Modes?.SelectMany(m => m.Mods).Distinct().ToArray() ?? [];
             if (usedMods.Length > 0) {
-                string[] modLines = [.. lines[lines.FindIndex(line => line.Trim().StartsWith("\"Mods\""))..]];
+                // check if the mods section has all the mods listed in the manifest
+                List<string> modLines = lines[lines.FindIndex(line => line.Trim().StartsWith("\"Mods\""))..];
 
-                IEnumerable<string> invalidMods = usedMods.Where(mod => !modLines.Any(line => line.Contains($"\"{mod}\"")));
-                if (invalidMods.Any())
-                    invalidWeaponMods.Add($"{weapon.Key} ({weapon.Value.Asset}): {string.Join(", ", invalidMods)}");
+                invalidWeaponMods.AddRange(
+                    usedMods.Where(mod => !modLines.Any(line => line.Contains($"\"{mod}\""))).Select(m => $"{weapon.Key}: {m}")
+                );
             }
             
+            if (weapon.Value.Modes?.Any(m => m.Type != WeaponModeType.Base && m.Name is null) == true)
+                invalidWeaponMods.Add(weapon.Key);
         }
         else {
-            missingWeaponDefs.Add($"{weapon.Key} ({weapon.Value.Asset})");
+            missingWeaponDefs.Add(weapon.Key);
         }
+    }
+
+    // show all errors and exit if any
+    if (missingAssets.Count > 0) {
+        Console.WriteLine("Missing weapon assets in manifest:");
+        missingAssets.ForEach(d => Console.WriteLine(" " + d));
     }
     if (missingWeaponDefs.Count > 0) {
         Console.WriteLine("Invalid weapon definitions:");
@@ -199,19 +220,22 @@ else if (input == "export") {
         Console.WriteLine("Invalid weapon mods:");
         invalidWeaponMods.ForEach(d => Console.WriteLine(" " + d));
     }
-    if (missingWeaponDefs.Count > 0 || invalidWeaponMods.Count > 0)
+    if (missingAssets.Count + missingWeaponDefs.Count + invalidWeaponMods.Count > 0)
         Utils.PressAnyKeyToExit(1);
 
+    // now export after everything is checked
     foreach (KeyValuePair<string, WeaponInfo> weapon in season.Weapons) {
         string weaponDefPath = $"Tools\\exported_files\\weapon\\{weapon.Value.Asset}.txt";
-        List<string> lines = [.. File.ReadAllLines(weaponDefPath).Where(line => !line.TrimStart().StartsWith("//"))];
+        List<string> lines = [.. File.ReadAllLines(weaponDefPath).Where(line => !line.TrimStart().StartsWith("//"))]; // remove comments
 
+        // its in vdf (Valve Data Format) from what i can tell but idk if the file extension should be .vdf or .txt
         string path = $"{seasonOutputDir}\\weapons\\{weapon.Key}.vdf";
         Console.WriteLine($"Saving {path} ({weapon.Value.Asset})");
         File.WriteAllLines(path, lines);
     }
 
-    string[] patternDefs = ["viewkick_patterns", "blast_patterns"];
+    // export blast/spread patterns and viewkick (recoil) patterns
+    string[] patternDefs = ["blast_patterns", "viewkick_patterns"];
     foreach (string patternDef in patternDefs) {
         string[] lines = [.. File.ReadAllLines($"Tools\\exported_files\\weapon\\{patternDef}.txt").Where(line => !line.TrimStart().StartsWith("//"))];
         
@@ -219,11 +243,14 @@ else if (input == "export") {
         File.WriteAllLines($"{seasonOutputDir}\\patterns\\{patternDef}.vdf", lines);
     }
 
-    season.Weapons.Values.ToList().ForEach(w => w.Asset = null);
-    File.WriteAllText($"{seasonOutputDir}\\manifest.json", JsonSerializer.Serialize(season, SeasonJsonContext.Default.SeasonInfo));
+    // remove asset paths from manifest since theyre only needed for the export process or whatever
+    foreach (WeaponInfo weapon in season.Weapons.Values) weapon.Asset = null;
 
-    Utils.PressAnyKeyToExit();
+    // save season manifest with all needed info (no asset names, setting CoreWeapon to true if not included in the human readable/input manifest)
+    File.WriteAllText($"{seasonOutputDir}\\manifest.json", JsonSerializer.Serialize(season, SeasonJsonContext.Default.SeasonInfo));
 }
+
+Utils.PressAnyKeyToExit();
 
 namespace ApexWeaponExporter {
     public class Tools {
@@ -233,7 +260,7 @@ namespace ApexWeaponExporter {
             Process rsx = new() {
                 StartInfo = new() {
                     FileName = "Tools\\rsx_nogui.exe",
-                    Arguments = $"\"{commonRpakPath}\" -export --exporttypes wepn",
+                    Arguments = $"\"{commonRpakPath}\" -export --exportdir exported_files --exporttypes wepn",
                     WorkingDirectory = "Tools",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -241,6 +268,7 @@ namespace ApexWeaponExporter {
             };
 
             static void OutputHandler(object sender, DataReceivedEventArgs e) {
+                // hide the 'loaded with no vertex data' lines cause we dont need starpaks and its model data
                 if (!string.IsNullOrEmpty(e.Data) && !e.Data.Contains("loaded with no vertex data"))
                     Console.WriteLine("[rsx] " + e.Data);
             }
@@ -255,7 +283,8 @@ namespace ApexWeaponExporter {
         }
 
         public static void RunDepotDownloader(string manifestId) {
-            string authArg = "-qr -remember-password";
+            // check for saved username if already logged in once or prompt qr code login if not
+            string authArg = "-qr";
             if (File.Exists("Tools\\username.txt")) {
                 string username = File.ReadAllText("Tools\\username.txt").Trim();
                 if (!string.IsNullOrEmpty(username))
@@ -266,31 +295,55 @@ namespace ApexWeaponExporter {
                 StartInfo = new() {
                     FileName = "Tools\\DepotDownloader.exe",
                     WorkingDirectory = "Tools",
-                    Arguments = $"{authArg} -app 1172470 -depot 1172471 -filelist depot\\filelist.txt -manifest {manifestId} -dir depot\\{manifestId}",
+                    Arguments = $"{authArg} -app 1172470 -depot 1172471 -filelist downloads\\filelist.txt -manifest {manifestId} -dir downloads\\{manifestId}",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 }
             };
 
-            static void OutputHandler(object sender, DataReceivedEventArgs e) {
+            // im not sure if stderr is used but ill cover it just incase
+            depotDownloader.ErrorDataReceived += (_, e) => {
                 if (!string.IsNullOrEmpty(e.Data)) {
-                    Console.WriteLine(e.Data);
+                    Console.WriteLine("[DepotDownloader] " + e.Data);
 
-                    Match usernameRegex = Regex.Match(e.Data, @"-username\s+(?<username>\S+)\s+-remember-password");
-                    if (usernameRegex.Success)
-                        File.WriteAllText("Tools\\username.txt", usernameRegex.Groups["username"].Value);
-
-                    if (e.Data.Contains("Failed to authenticate with Steam"))
+                    if (e.Data.Contains("Failed to authenticate with Steam")) {
                         File.Delete("Tools\\username.txt");
+                        if (!depotDownloader.HasExited)
+                            depotDownloader.Kill(true);
+                        Utils.PressAnyKeyToExit(1, "DepotDownloader failed to authenticate with Steam, restart to prompt QR login");
+                    }
+                }
+            };
+
+            depotDownloader.Start();
+            depotDownloader.BeginErrorReadLine();
+
+            // read stdout stream because the "enter account password" prompt doesnt use a newline so the normal OutputDataReceived event doesnt read it
+            string line = string.Empty;
+            while (!depotDownloader.StandardOutput.EndOfStream) {
+                if (line.Length == 0)
+                    Console.Write("[DepotDownloader] ");
+                char character = (char)depotDownloader.StandardOutput.Read();
+                line += character;
+                Console.Write(character);
+
+                if (line.Contains("Failed to authenticate with Steam") || line.Contains("Enter account password for")) {
+                    File.Delete("Tools\\username.txt");
+                    if (!depotDownloader.HasExited)
+                        depotDownloader.Kill(true);
+                    Utils.PressAnyKeyToExit(1, "\rDepotDownloader failed to authenticate with Steam, restart to prompt QR login");
+                }
+
+                if (character == '\n') {
+                    if (!string.IsNullOrEmpty(line)) {
+                        Match usernameRegex = Regex.Match(line, @"-username\s+(?<username>\S+)\s+-remember-password");
+                        if (usernameRegex.Success)
+                            File.WriteAllText("Tools\\username.txt", usernameRegex.Groups["username"].Value.Trim());
+                    }
+                    line = string.Empty;
                 }
             }
 
-            depotDownloader.OutputDataReceived += OutputHandler;
-            depotDownloader.ErrorDataReceived += OutputHandler;
-
-            depotDownloader.Start();
-            depotDownloader.BeginOutputReadLine();
-            depotDownloader.BeginErrorReadLine();
             depotDownloader.WaitForExit();
         }
 
@@ -315,9 +368,7 @@ namespace ApexWeaponExporter {
                 return JsonSerializer.Deserialize(File.ReadAllText("Tools\\versions.json"), VersionsJsonContext.Default.DownloadedVersions) ?? new();
             }
 
-            public void Save() {
-                File.WriteAllText("Tools\\versions.json", JsonSerializer.Serialize(this, VersionsJsonContext.Default.DownloadedVersions));
-            }
+            public void Save() => File.WriteAllText("Tools\\versions.json", JsonSerializer.Serialize(this, VersionsJsonContext.Default.DownloadedVersions));
         }
         
     }
@@ -326,14 +377,14 @@ namespace ApexWeaponExporter {
         public static HttpClient HttpClient { get; } = new() {
             Timeout = TimeSpan.FromSeconds(30),
             DefaultRequestHeaders = {
-                { "User-Agent", "SeasonExport" }
+                { "User-Agent", "ApexWeaponExporter" }
             }
         };
 
         public static void PressAnyKeyToExit(int exitCode = 0, string? message = null) {
-            if (!Console.IsInputRedirected) {
-                if (message is not null)
+            if (message is not null)
                     Console.WriteLine(message);
+            if (!Console.IsInputRedirected) {
                 Console.Write("Press any key to exit...");
                 Console.ReadKey();
             }
@@ -371,7 +422,7 @@ namespace ApexWeaponExporter {
 
             string url = json.RootElement.GetProperty("assets").EnumerateArray()
                 .Select(a => (name: a.GetProperty("name").GetString()!, url: a.GetProperty("browser_download_url").GetString()!))
-                .First(predicate)
+                .First(predicate) // get the first asset that matches the filter thing
                 .url;
             
             return await DownloadWithProgress(url);
@@ -382,7 +433,7 @@ namespace ApexWeaponExporter {
             using ZipArchive archive = new(zipStream);
             if (!Directory.Exists(Path.GetDirectoryName(extractPath)))
                 Directory.CreateDirectory(Path.GetDirectoryName(extractPath)!);
-            archive.Entries.First(predicate).ExtractToFile(extractPath, true);
+            archive.Entries.First(predicate).ExtractToFile(extractPath, true); // only save the first file that matches the filter thing
         }
 
         public static async Task<byte[]> DownloadWithProgress(string url) {
@@ -441,7 +492,7 @@ namespace ApexWeaponExporter {
     }
 
     public sealed class WeaponMode {
-        public required string Name { get; init; }
+        public string? Name { get => field?.BlankNullable; init; }
 
         public string[] Mods { get; init; } = [];
 
