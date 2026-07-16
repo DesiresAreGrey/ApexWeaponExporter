@@ -132,16 +132,20 @@ if (command == "list" || command == "savelist") { // list weapon defs
     Console.WriteLine($"Extracting weapon definitions from {commonRpakPath}...");
     Tools.RunRSX(commonRpakPath);
 
-    string[] weaponDefs = [.. Directory.GetFiles("Tools\\exported_files\\weapon", "*.txt").Select(d => Path.GetFileNameWithoutExtension(d) ?? d.Replace(".txt", ""))];
+    List<string> weaponDefs = [.. Directory.GetFiles("Tools\\exported_files\\weapon", "*.txt").Select(d => Path.GetFileNameWithoutExtension(d) ?? d.Replace(".txt", ""))];
+    weaponDefs.Sort();
+    
     if (!Utils.TryClearDirectory("Tools\\exported_files"))
         Utils.PressAnyKeyToExit(1, "Failed to clear exported_files directory.");
 
     if (command == "savelist") {
-        weaponDefs.SaveToFile($"Output\\weapon_definitions_{seasonManifest.RootElement.GetProperty("ID").GetString()}_{steamManifestId}.txt");
+        string saveListPath = $"Output\\weapon_definitions_{seasonManifest.RootElement.GetProperty("ID").GetString()}_{steamManifestId}.txt";
+        weaponDefs.SaveToFile(saveListPath);
+        Console.WriteLine($"Saved weapon definitions to {saveListPath}");
     }
     else {
         Console.WriteLine("Weapon Definitions:");
-        weaponDefs.ToList().ForEach(Console.WriteLine);
+        weaponDefs.ForEach(Console.WriteLine);
     }
 }
 else if (command == "export") { // export weapon defs
@@ -429,8 +433,9 @@ namespace ApexWeaponExporter {
         public static void SaveFileFromZip(byte[] zipData, Func<ZipArchiveEntry, bool> predicate, string extractPath) {
             using MemoryStream zipStream = new(zipData);
             using ZipArchive archive = new(zipStream);
-            if (!Directory.Exists(Path.GetDirectoryName(extractPath)))
-                Directory.CreateDirectory(Path.GetDirectoryName(extractPath)!);
+            string? extractDir = Path.GetDirectoryName(extractPath);
+            if (extractDir?.EmptyNullable is not null)
+                Directory.CreateDirectory(extractDir);
             archive.Entries.First(predicate).ExtractToFile(extractPath, true); // only save the first file that matches the filter thing
         }
 
@@ -466,16 +471,18 @@ namespace ApexWeaponExporter {
             public string? BlankNullable => string.IsNullOrWhiteSpace(val) ? null : val;
 
             public void SaveToFile(string path) {
-                if (!Directory.Exists(Path.GetDirectoryName(path)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                string? dir = Path.GetDirectoryName(path);
+                if (dir?.EmptyNullable is not null)
+                    Directory.CreateDirectory(dir);
                 File.WriteAllText(path, val);
             }
         }
 
         extension(IEnumerable<string> val) {
             public void SaveToFile(string path) {
-                if (!Directory.Exists(Path.GetDirectoryName(path)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                string? dir = Path.GetDirectoryName(path);
+                if (dir?.EmptyNullable is not null)
+                    Directory.CreateDirectory(dir);
                 File.WriteAllLines(path, val);
             }
         }
