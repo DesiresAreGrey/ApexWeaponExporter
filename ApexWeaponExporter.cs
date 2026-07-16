@@ -398,8 +398,12 @@ namespace ApexWeaponExporter {
             for (int read; (read = await input.ReadAsync(buffer)) > 0;) {
                 await output.WriteAsync(buffer.AsMemory(0, read));
                 downloaded += read;
-                Console.Write($"\r{downloaded * 100 / total}% ({downloaded / 1048576d:F1}/{total / 1048576d:F1} MB)\x1b[K");
+                if (Console.IsOutputRedirected)
+                    Console.WriteLine($"{downloaded * 100 / total}% ({downloaded / 1048576d:F1}/{total / 1048576d:F1} MB)");
+                else
+                    Console.Write($"\r{downloaded * 100 / total}% ({downloaded / 1048576d:F1}/{total / 1048576d:F1} MB)\x1b[K");
             }
+            
             Console.Write($"\rDownloaded ({downloaded / 1048576d:F1} MB)\x1b[K");
 
             Console.WriteLine();
