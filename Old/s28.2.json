@@ -1,0 +1,156 @@
+{
+  "Name": "Season 28.2",
+  "FullName": "Season 28.2: Overclocked",
+  "Season": 28,
+  "Split": 2,
+  "Title": "Overclocked",
+  "ID": "s28.2",
+  "ReleaseDate": "2026-03-24",
+  "SteamManifestID": 2853110164697281141,
+
+  "Weapons": {
+    "3030repeater": { "Name": "30-30 Repeater", "Asset": "mp_weapon_3030",
+      "Modes": [{"Name": "Dual Shell", "Mods": ["hopup_dual_loader"], "Type": "Hopup"}]
+    },
+
+    "alternator": { "Name": "Alternator", "Asset": "mp_weapon_alternator_smg",
+      "Modes": [{"Name": "Double Tap", "Mods": ["altfire_double_tap"], "Type": "Hopup"}]
+    },
+    "alternator_mythic": { "Name": "Alternator (Mythic)", "Asset": "mp_weapon_alternator_smg_crate", "CoreWeapon": false,
+      "Modes": [{"Name": "Double Tap", "Mods": ["altfire_double_tap"], "Type": "Hopup"}]
+    },
+
+    "re45burst": { "Name": "RE-45 Burst", "Asset": "mp_weapon_autopistol_fusion" },
+
+    "bocek": { "Name": "Bocek", "Asset": "mp_weapon_bow" },
+    "bocek_mythic": { "Name": "Bocek (Mythic)", "Asset": "mp_weapon_bow_crate", "CoreWeapon": false },
+
+    "car": { "Name": "C.A.R", "Asset": "mp_weapon_car", "CoreWeapon": false },
+    "car_mythic": { "Name": "C.A.R. (Mythic)", "Asset": "mp_weapon_car_crate",
+      "Modes": [{"Name": "Hammerpoint", "Mods": ["alt_ammo_crate"], "Type": "FiringMode"}]
+    },
+
+    "chargerifle": { "Name": "Charge Rifle", "Asset": "mp_weapon_defender",
+      "Modes": [{"Name": "Selectfire", "Mods": ["altfire_selectfire", "full_auto"], "Type": "Hopup"}]
+    },
+
+    "longbow": { "Name": "Longbow", "Asset": "mp_weapon_dmr",
+      "Modes": [{"Name": "Graffiti", "Mods": ["hopup_paintball_elite"], "Type": "Hopup"}]
+    },
+
+    "tripletake": { "Name": "Triple Take", "Asset": "mp_weapon_doubletake" },
+    "tripletake_mythic": { "Name": "Triple Take (Mythic)", "Asset": "mp_weapon_doubletake_crate", "CoreWeapon": false },
+
+    "rampage": { "Name": "Rampage", "Asset": "mp_weapon_dragon_lmg",
+      "Modes": [{"Name": "Revved Up", "Mods": ["energized"], "Type": "Energized"}]
+    },
+    "rampage_mythic": { "Name": "Rampage (Mythic)", "Asset": "mp_weapon_dragon_lmg_crate", "CoreWeapon": false,
+      "Modes": [{"Name": "Revved Up", "Mods": ["energized"], "Type": "Energized"}]
+    },
+
+    "havoc": { "Name": "Havoc", "Asset": "mp_weapon_energy_ar",
+      "Modes": [{"Name": "Turbocharger", "Mods": ["hopup_turbocharger"], "Type": "Hopup"}]
+    },
+    "havoc_mythic": { "Name": "Havoc (Mythic)", "Asset": "mp_weapon_energy_ar_crate", "CoreWeapon": false,
+      "Modes": [{"Name": "Turbocharger", "Mods": ["hopup_turbocharger"], "Type": "Hopup"}]
+    },
+
+    "devotion": { "Name": "Devotion", "Asset": "mp_weapon_esaw",
+      "Modes": [{"Name": "Turbocharger", "Mods": ["hopup_turbocharger"], "Type": "Hopup"}]
+    },
+    "devotion_mythic": { "Name": "Devotion (Mythic)", "Asset": "mp_weapon_esaw_crate", "CoreWeapon": false,
+      "Modes": [{"Name": "Turbocharger", "Mods": ["hopup_turbocharger"], "Type": "Hopup"}]
+    },
+
+    "peacekeeper": { "Name": "Peacekeeper", "Asset": "mp_weapon_energy_shotgun" ,
+      "Modes": [{"Name": "Disrupter", "Mods": ["hopup_shield_breaker"], "Type": "Hopup"}]
+    },
+    "peacekeeper_mythic": { "Name": "Peacekeeper (Mythic)", "Asset": "mp_weapon_energy_shotgun_crate", "CoreWeapon": false },
+
+    "g7scout": { "Name": "G7 Scout", "Asset": "mp_weapon_g2", "CoreWeapon": false },
+    "g7scout_mythic": { "Name": "G7 Scout (Mythic)", "Asset": "mp_weapon_g2_crate",
+      "Modes": [{"Name": "Double Tap", "Mods": ["altfire_double_tap"], "Type": "Hopup"}]
+    },
+
+    "hemlok_auto": { "Name": "Hemlok Breach", "Asset": "mp_weapon_auto_hemlok",
+      "Modes": [{"Name": "Breach Charge", "Mods": ["altfire"], "Type": "FiringMode"}]
+    },
+
+    "spitfire": { "Name": "Spitfire", "Asset": "mp_weapon_lmg" },
+
+    "lstar": { "Name": "L-STAR", "Asset": "mp_weapon_lstar",
+      "Modes": [{"Name": "Graffiti", "Mods": ["hopup_paintball_elite"], "Type": "Hopup"}]
+    },
+    "lstar_mythic": { "Name": "L-STAR (Mythic)", "Asset": "mp_weapon_lstar_crate", "CoreWeapon": false },
+
+    "mastiff": { "Name": "Mastiff", "Asset": "mp_weapon_mastiff",
+      "Modes": [{"Name": "Dual Shell", "Mods": ["hopup_dual_loader"], "Type": "Hopup"}]
+    },
+    "mastiff_mythic": { "Name": "Mastiff (Mythic)", "Asset": "mp_weapon_mastiff_crate", "CoreWeapon": false },
+
+    "prowler": { "Name": "Prowler", "Asset": "mp_weapon_pdw",
+      "Modes": [{"Name": "Selectfire", "Mods": ["altfire_selectfire"], "Type": "Hopup"}]
+    },
+    "prowler_mythic": { "Name": "Prowler (Mythic)", "Asset": "mp_weapon_pdw_crate", "CoreWeapon": false,
+      "Modes": [{"Name": "Selectfire", "Mods": ["altfire_selectfire"], "Type": "Hopup"}]
+    },
+
+    "nemesis": { "Name": "Nemesis", "Asset": "mp_weapon_nemesis",
+      "Modes": [
+        {"Name": "Full Energy", "Mods": ["fully_heated"], "Type": "Energized"}
+      ]
+    },
+
+    "r99": { "Name": "R-99", "Asset": "mp_weapon_r97" },
+    "r99_mythic": { "Name": "R-99 (Mythic)", "Asset": "mp_weapon_r97_crate", "CoreWeapon": false },
+
+    "r301": { "Name": "R-301", "Asset": "mp_weapon_rspn101" },
+
+    "p2020": { "Name": "P2020", "Asset": "mp_weapon_semipistol",
+      "Modes": [
+        {"Name": "Akimbo", "Mods": ["akimbo_active"], "Type": "Akimbo"},
+        {"Name": "Hammerpoints", "Mods": ["hopup_unshielded_dmg"], "Type": "Hopup"},
+        {"Name": "Akimbo + Hammerpoints", "Mods": ["hopup_unshielded_dmg", "akimbo_active"], "Type": "HopupAkimbo"}
+      ]
+    },
+    "p2020_mythic": { "Name": "P2020 (Mythic)", "Asset": "mp_weapon_semipistol_crate", "CoreWeapon": false,
+      "Modes": [
+        {"Name": "Default", "Mods": ["hopup_unshielded_dmg"], "Type": "Base"},
+        {"Name": "Akimbo", "Mods": ["hopup_unshielded_dmg", "akimbo_active"], "Type": "Akimbo"}
+      ]
+    },
+
+    "sentinel": { "Name": "Sentinel", "Asset": "mp_weapon_sentinel",
+      "Modes": [{"Name": "Amped", "Mods": ["energized"], "Type": "Energized"}]
+    },
+    
+    "eva8": { "Name": "EVA-8", "Asset": "mp_weapon_shotgun",
+      "Modes": [{"Name": "Double Tap", "Mods": ["altfire_double_tap"], "Type": "Hopup"}]
+    },
+    "eva8_mythic": { "Name": "EVA-8 (Mythic)", "Asset": "mp_weapon_shotgun_crate", "CoreWeapon": false,
+      "Modes": [{"Name": "Double Tap", "Mods": ["altfire_double_tap"], "Type": "Hopup"}]
+    },
+
+    "mozambique": { "Name": "Mozambique", "Asset": "mp_weapon_shotgun_pistol",
+      "Modes": [
+        {"Name": "Akimbo", "Mods": ["akimbo_active"], "Type": "Akimbo"},
+        {"Name": "Graffiti", "Mods": ["hopup_paintball_elite"], "Type": "Hopup"},
+        {"Name": "Akimbo + Graffiti", "Mods": ["hopup_paintball_elite", "akimbo_active"], "Type": "HopupAkimbo"}
+      ]
+    },
+
+    "kraber": { "Name": "Kraber", "Asset": "mp_weapon_sniper" },
+
+    "flatline": { "Name": "Flatline", "Asset": "mp_weapon_vinson"},
+
+    "volt": { "Name": "Volt", "Asset": "mp_weapon_volt_smg" },
+
+    "wingman": { "Name": "Wingman", "Asset": "mp_weapon_wingman",
+      "Modes": [{"Name": "Graffiti", "Mods": ["hopup_paintball_elite"], "Type": "Hopup"}]
+    },
+    "wingman_mythic": { "Name": "Wingman (Mythic)", "Asset": "mp_weapon_wingman_crate", "CoreWeapon": false },
+
+    "sheila": { "Name": "Sheila (Rampart)", "Asset": "mp_weapon_mobile_hmg" },
+    "snipersmark": { "Name": "Sniper's Mark (Vantage)", "Asset": "mp_ability_sniper_ult" }
+  }
+}
