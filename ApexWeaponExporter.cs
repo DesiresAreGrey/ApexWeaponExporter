@@ -27,7 +27,7 @@ if (depotDownloaderVersion is not null && (!File.Exists("Tools\\DepotDownloader.
 }
 
 // Get season manifest
-Console.Write("Season manifest path (can omit .json extension) [Blank for Manifests\\current.json]: ");
+Console.Write("Season manifest path (can omit 'Manifest/' and/or '.json' from path) [Blank for Manifests\\current.json]: ");
 string seasonManifestPath = Console.ReadLine()?.BlankNullable ?? "Manifests\\current.json";
 
 // Add .json if missing
@@ -142,10 +142,12 @@ if (command == "list" || command == "savelist") { // list weapon defs
         string saveListPath = $"Output\\weapon_definitions_{seasonManifest.RootElement.GetProperty("ID").GetString()}_{steamManifestId}.txt";
         weaponDefs.SaveToFile(saveListPath);
         Console.WriteLine($"Saved weapon definitions to {saveListPath}");
+        Console.WriteLine("SaveList Succeeded");
     }
     else {
         Console.WriteLine("Weapon Definitions:");
         weaponDefs.ForEach(Console.WriteLine);
+        Console.WriteLine("List Succeeded");
     }
 }
 else if (command == "export") { // export weapon defs
@@ -249,7 +251,15 @@ else if (command == "export") { // export weapon defs
     foreach (WeaponInfo weapon in season.Weapons.Values) weapon.Asset = null;
 
     // save season manifest with all needed info (no asset names, setting CoreWeapon to true if not included in the human readable/input manifest)
-    JsonSerializer.Serialize(season, SeasonJsonContext.Default.SeasonInfo).SaveToFile($"{seasonOutputDir}\\manifest.json");
+    string manifestOutputPath = $"{seasonOutputDir}\\manifest.json";
+    JsonSerializer.Serialize(season, SeasonJsonContext.Default.SeasonInfo).SaveToFile(manifestOutputPath);
+    Console.WriteLine($"Saved manifest to {manifestOutputPath}");
+
+    Console.WriteLine("Export Succeeded");
+}
+else {
+    Console.WriteLine($"Unknown command: {command}");
+    Utils.PressAnyKeyToExit(1);
 }
 
 Utils.PressAnyKeyToExit();
@@ -329,7 +339,7 @@ namespace ApexWeaponExporter {
                 line += character;
                 Console.Write(character);
 
-                if (line.Contains("Failed to authenticate with Steam") || line.Contains("Enter account password for")) {
+                if (line.Contains("Failed to authenticate with Steam") || line.Contains("Unable to get steam3 credentials") || line.Contains("Enter account password for")) {
                     File.Delete("Tools\\username.txt");
                     if (!depotDownloader.HasExited)
                         depotDownloader.Kill(true);
