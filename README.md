@@ -2,7 +2,7 @@
 
 Script to export weapon data from Apex Legends for https://desiresaregrey.com/misc/apex-weapon-stats (Site is in the process of being updated for this new format)
 
-The script is run using the command `dotnet run ApexWeaponExporter.cs` and requires [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0).
+The script is run using the command `dotnet run ApexWeaponExporter.cs` and requires [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0) and Windows.
 
 It downloads specific versions of the game's files (using Steam manifest IDs https://steamdb.info/depot/1172471/manifests/) with DepotDownloader, and uses rsx to get the weapon definition files. It uses a season manifest file (explained below) to copy the needed definitions to an Output directory as well as the manifest itself to be uploaded to the site.
 
